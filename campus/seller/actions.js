@@ -182,11 +182,12 @@ Object.assign(ACTIONS, {
   "confirm-order": previewReadOnly,
   "start-checkout": previewReadOnly,
 
-  "seller-new-listing": () => {
-    state.sellKind = null;
-    state.sellMerchandiseType = null;
-    setView("seller-new");
-  },
+  "seller-new-listing": () =>
+    requireAuth(() => {
+      state.sellKind = null;
+      state.sellMerchandiseType = null;
+      setView("seller-new");
+    }),
 
   "seller-edit-listing": (target) => openListingEditor(target.dataset.id),
 

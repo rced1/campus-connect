@@ -108,6 +108,8 @@ Sharetribe sends verification emails. For Playwright e2e (M3), either:
 
 **Paste back:** chosen approach for reading verify links in Test.
 
+**M3 note (2026-11-21):** Auth UI + session + worker auto-approve are in code (`m3-accounts` PR). Full M3 e2e still needs a readable verify path (this §) and Console “Approve users who want to join” on. Local smoke: sign up with `@sdsu.edu`, verify email, confirm worker sets approved + `metadata.verified`, then buy/message gates unlock.
+
 ---
 
 ## Confirm in writing before Live (M9) — section 15

@@ -30,14 +30,23 @@ function updateChrome() {
     else link.removeAttribute("aria-current");
   });
 
-  setBadge(".messages-nav-button", unreadCount(data.conversations), "Messages");
-  setBadge(".notifications-nav-button", unreadCount(data.notifications), "Notifications");
-  const profileButton = document.querySelector(".profile-nav-button");
-  const profileName = IS_SELLER ? getSeller(myId())?.name : data.account.displayName;
-  profileButton.classList.toggle("has-photo", Boolean(profilePhoto(myId())));
-  profileButton.innerHTML = avatarContents(initialsOf(profileName), myId());
+  const signedIn = Boolean(data.session?.userId);
+  document.querySelectorAll("[data-auth-only]").forEach((el) => { el.hidden = !signedIn; });
+  document.querySelectorAll("[data-guest-only]").forEach((el) => { el.hidden = signedIn; });
 
-  if (IS_SELLER) {
+  setBadge(".messages-nav-button", signedIn ? unreadCount(data.conversations) : 0, "Messages");
+  setBadge(".notifications-nav-button", signedIn ? unreadCount(data.notifications) : 0, "Notifications");
+  const profileButton = document.querySelector(".profile-nav-button");
+  if (profileButton) {
+    const profileName = signedIn
+      ? (IS_SELLER ? getSeller(myId())?.name : data.session.displayName || data.account.displayName)
+      : "";
+    profileButton.classList.toggle("has-photo", signedIn && Boolean(profilePhoto(myId())));
+    profileButton.innerHTML = signedIn ? avatarContents(initialsOf(profileName), myId()) : "";
+    profileButton.hidden = !signedIn;
+  }
+
+  if (IS_SELLER && signedIn) {
     const requests = data.sellerOrders.filter((order) => order.status === "requested").length;
     document.querySelectorAll(".seller-orders-badge").forEach((badge) => {
       badge.textContent = requests > 9 ? "9+" : String(requests);
@@ -46,16 +55,22 @@ function updateChrome() {
   }
 
   const bell = document.querySelector(".notifications-nav-button");
-  bell.classList.toggle("active", state.notificationsOpen);
-  bell.setAttribute("aria-expanded", state.notificationsOpen);
+  if (bell) {
+    bell.classList.toggle("active", state.notificationsOpen);
+    bell.setAttribute("aria-expanded", state.notificationsOpen);
+  }
   const popover = document.querySelector("#notification-popover");
-  popover.hidden = !state.notificationsOpen;
-  popover.innerHTML = state.notificationsOpen ? notificationPopover() : "";
+  if (popover) {
+    popover.hidden = !state.notificationsOpen;
+    popover.innerHTML = state.notificationsOpen ? notificationPopover() : "";
+  }
 }
 
 function setBadge(buttonSelector, count, label) {
   const button = document.querySelector(buttonSelector);
+  if (!button) return;
   const badge = button.querySelector(".header-badge");
+  if (!badge) return;
   badge.textContent = count > 9 ? "9+" : count;
   badge.hidden = !count;
   button.setAttribute("aria-label", count ? `${label}, ${count} unread` : label);
@@ -108,7 +123,7 @@ function openVerifiedModal() {
 }
 
 function openSignOutModal() {
-  renderModal(`<div class="eyebrow">Your account</div><h2>Sign out?</h2><p class="muted">You will go back to the start, and this demo starts over.</p><div class="modal-actions"><button class="ghost-button" data-action="close-modal">Stay signed in</button><button class="danger-button" data-action="confirm-sign-out">${icon("logout")} Sign out</button></div>`);
+  renderModal(`<div class="eyebrow">Your account</div><h2>Sign out?</h2><p class="muted">You will return to browsing Campus Connect.</p><div class="modal-actions"><button class="ghost-button" data-action="close-modal">Stay signed in</button><button class="danger-button" data-action="confirm-sign-out">${icon("logout")} Sign out</button></div>`);
 }
 
 /* ---------- Actions and forms every page has ---------- */
@@ -116,9 +131,12 @@ function openSignOutModal() {
 Object.assign(ACTIONS, {
   "go-home": () => navigate(HOME_VIEW),
   "switch-mode": () => {
-    // CC: plain links preferred; keep handoff until mocks are removed (M7).
-    api.keepDemoData();
-    location.href = IS_SELLER ? "/" : "/seller";
+    const go = () => {
+      if (typeof api.keepDemoData === "function") api.keepDemoData();
+      location.href = IS_SELLER ? "/" : "/seller";
+    };
+    if (IS_SELLER) return go();
+    return requireAuth(go);
   },
   reload: () => location.reload(),
   "close-modal": () => closeModal(),
@@ -129,7 +147,7 @@ Object.assign(ACTIONS, {
   "sign-out": () => openSignOutModal(),
   "confirm-sign-out": async () => {
     await api.signOut();
-    location.href = "index.html";
+    location.href = "/";
   },
 
   "toggle-notifications": () => toggleNotifications(!state.notificationsOpen),
@@ -181,6 +199,7 @@ document.addEventListener("click", (event) => {
   if (state.notificationsOpen && !event.target.closest(".header-popover-anchor")) toggleNotifications(false);
   const target = event.target.closest("[data-view], [data-action]");
   if (!target) return;
+  event.preventDefault();
   if (target.dataset.view) return navigate(target.dataset.view);
   const handler = ACTIONS[target.dataset.action];
   if (handler) runOnce(target, handler, target, event);
@@ -216,6 +235,7 @@ document.addEventListener("keydown", (event) => {
 
 async function start() {
   hydrateStaticIcons();
+  if (typeof bindRouter === "function") bindRouter();
   try {
     await load(...(IS_SELLER ? SELLER_DATA : BUYER_DATA));
   } catch (error) {
@@ -228,5 +248,5 @@ async function start() {
 }
 
 /* An old link format: index.html#seller opened the Seller Hub. */
-if (!IS_SELLER && location.hash === "#seller") location.replace("seller.html");
+if (!IS_SELLER && location.hash === "#seller") location.replace("/seller");
 else start();
