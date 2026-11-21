@@ -1,0 +1,28 @@
+{
+  "family": "campus-connect-worker",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "runtimePlatform": { "operatingSystemFamily": "LINUX", "cpuArchitecture": "X86_64" },
+  "containerDefinitions": [
+    {
+      "name": "worker",
+      "image": "ACCOUNT.dkr.ecr.REGION.amazonaws.com/campus-connect-web:latest",
+      "essential": true,
+      "command": ["node", "server/cc/worker.js"],
+      "environment": [
+        { "name": "REACT_APP_ENV", "value": "production" }
+      ],
+      "secrets": [],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/campus-connect-worker",
+          "awslogs-region": "us-west-2",
+          "awslogs-stream-prefix": "worker"
+        }
+      }
+    }
+  ]
+}

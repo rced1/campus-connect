@@ -14,6 +14,9 @@ const wellKnownRouter = require('./wellKnownRouter');
 const webmanifestResourceRoute = require('./resources/webmanifest');
 const robotsTxtRoute = require('./resources/robotsTxt');
 const sitemapResourceRoute = require('./resources/sitemap');
+// CC: serve campus pages from the dev API server too
+const { mountCampus } = require('./cc/campusStatic');
+const { pingRedis } = require('./cc/redis');
 
 const radix = 10;
 const PORT = parseInt(process.env.REACT_APP_DEV_API_SERVER_PORT, radix);
@@ -29,7 +32,17 @@ app.use(
 );
 app.use(cookieParser());
 app.use('/.well-known', wellKnownRouter);
+
+// CC: health + campus UI on the dev API port (http://localhost:3500/)
+app.get('/healthz', async (req, res) => {
+  const redisOk = await pingRedis();
+  if (!redisOk && process.env.REDIS_URL) {
+    return res.status(503).json({ ok: false, redis: false });
+  }
+  return res.status(200).json({ ok: true, redis: redisOk });
+});
 app.use('/api', apiRouter);
+mountCampus(app);
 
 // Generate web app manifest
 // When developing with "yarn run dev",

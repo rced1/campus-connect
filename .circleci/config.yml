@@ -66,6 +66,15 @@ jobs:
       - run:
           name: Build client application
           command: yarn run build
+  # CC: secret scan (gitleaks)
+  secret-scan:
+    docker:
+      - image: zricethezav/gitleaks:v8.21.2
+    steps:
+      - checkout
+      - run:
+          name: Scan for secrets
+          command: gitleaks detect --source . --verbose --no-git
 workflows:
   format_test_build_audit:
     jobs:
@@ -73,3 +82,4 @@ workflows:
       - translations-sorted
       - test
       - build
+      - secret-scan
