@@ -1,0 +1,42 @@
+# Campus Connect staging outline (AWS).
+# Not a complete production stack — fill ACCOUNT/subnets/certificates before apply.
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Campus Connect staging skeleton — ECS Fargate web + worker + notes for ElastiCache
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: campus-connect-staging
+  DesiredWebCount:
+    Type: Number
+    Default: 2
+  DesiredWorkerCount:
+    Type: Number
+    Default: 1
+
+Resources:
+  Cluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Ref EnvironmentName
+
+  WebLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /ecs/campus-connect-web
+      RetentionInDays: 14
+
+  WorkerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /ecs/campus-connect-worker
+      RetentionInDays: 14
+
+  # ALB, target group (health check path /healthz), security groups,
+  # ElastiCache Redis, task roles, and services are intentionally left for
+  # the human/AWS console or a follow-up CFN pass once VPC IDs are known.
+  # See infra/README.md and infra/ecs/*.json for task shapes.
+
+Outputs:
+  ClusterName:
+    Value: !Ref Cluster

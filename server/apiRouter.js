@@ -22,6 +22,9 @@ const createUserWithIdp = require('./api/auth/createUserWithIdp');
 const { authenticateFacebook, authenticateFacebookCallback } = require('./api/auth/facebook');
 const { authenticateGoogle, authenticateGoogleCallback } = require('./api/auth/google');
 
+// CC: Campus Connect API routes
+const ccRouter = require('./api/cc');
+
 const router = express.Router();
 
 // ================ API router middleware: ================ //
@@ -56,6 +59,9 @@ router.post('/transaction-line-items', transactionLineItems);
 router.post('/initiate-privileged', initiatePrivileged);
 router.post('/transition-privileged', transitionPrivileged);
 router.post('/delete-account', deleteAccount);
+
+// CC: mount /api/cc/*
+router.use('/cc', ccRouter);
 
 // Create user with identity provider (e.g. Facebook or Google)
 // This endpoint is called to create a new user after user has confirmed
