@@ -19,6 +19,8 @@ const {
   serialize,
   fetchCommission,
 } = require('../api-util/sdk');
+// CC: privileged transition allow-list
+const { assertPrivilegedAllowed } = require('../cc/privilegedTransitions');
 
 const { Money } = sharetribeSdk.types;
 
@@ -140,6 +142,15 @@ module.exports = (req, res) => {
       const listing = getListingRelationShip(showTransactionResponse.data);
       const commissionAsset = fetchAssetsResponse.data.data[0];
 
+      // CC: allow-list + listing checks (complete-pickup only via scan route later)
+      const fromScan = Boolean(orderData?.fromScan || req.headers['x-cc-scan'] === '1');
+      const gate = assertPrivilegedAllowed(transitionName, 'transition', { listing, fromScan });
+      if (!gate.ok) {
+        const err = new Error(gate.message);
+        err.status = 403;
+        throw err;
+      }
+
       const existingMetadata = transaction?.attributes?.metadata;
       const existingOffers = existingMetadata?.offers || [];
       const transitions = transaction.attributes.transitions;
@@ -209,6 +220,10 @@ module.exports = (req, res) => {
         .end();
     })
     .catch(e => {
+      // CC: allow-list failures
+      if (e?.status === 403) {
+        return res.status(403).json({ error: { code: 'forbidden', message: e.message } });
+      }
       handleError(res, e);
     });
 };

@@ -11,6 +11,8 @@ const {
   fetchCommission,
 } = require('../api-util/sdk');
 const { sanitizePushPaymentBodyParams } = require('../api-util/pushPaymentMethodValidation');
+// CC: privileged transition allow-list
+const { assertPrivilegedAllowed } = require('../cc/privilegedTransitions');
 
 const { Money } = sharetribeSdk.types;
 
@@ -61,6 +63,11 @@ module.exports = (req, res) => {
     return handleError(res, e, { skipErrorLogging: true });
   }
   const transitionName = bodyParams.transition;
+  // CC: reject unknown privileged initiates early
+  const initiateGate = assertPrivilegedAllowed(transitionName, 'initiate');
+  if (!initiateGate.ok) {
+    return res.status(403).json({ error: { code: 'forbidden', message: initiateGate.message } });
+  }
   // Share one cookie token store so a refresh during listings.show is reused for exchangeToken.
   const tokenStore = createCookieTokenStore(req, res);
   const sdk = getSdk(req, res, tokenStore);
