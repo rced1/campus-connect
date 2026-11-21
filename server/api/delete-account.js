@@ -31,6 +31,19 @@ const stripeRelatedStatesForDigitalDownload = [
   'state/purchased',
   'state/reported',
 ];
+// CC: Campus Connect processes
+const stripeRelatedStatesForCcBooking = [
+  'state/pending-payment',
+  'state/preauthorized',
+  'state/accepted',
+  'state/delivered',
+];
+const stripeRelatedStatesForCcPickup = [
+  'state/pending-payment',
+  'state/preauthorized',
+  'state/accepted',
+  'state/ready',
+];
 
 const HAS_INCOMPLETE_TRANSACTIONS =
   'User has transactions on states that include incomplete payment processing';
@@ -69,12 +82,27 @@ module.exports = (req, res) => {
       states: stripeRelatedStatesForDigitalDownload.join(','),
     });
 
+  // CC:
+  const ongoingCcBookingsWithIncompletePaymentProcessing = () =>
+    sdk.transactions.query({
+      processNames: 'cc-booking',
+      states: stripeRelatedStatesForCcBooking.join(','),
+    });
+
+  const ongoingCcPickupsWithIncompletePaymentProcessing = () =>
+    sdk.transactions.query({
+      processNames: 'cc-pickup',
+      states: stripeRelatedStatesForCcPickup.join(','),
+    });
+
   // Check for any states that may contain incomplete Stripe actions
   Promise.all([
     ongoingBookingsWithIncompletePaymentProcessing(),
     ongoingPurchasesWithIncompletePaymentProcessing(),
     ongoingNegotiationsWithIncompletePaymentProcessing(),
     ongoingDigitalDownloadsWithIncompletePaymentProcessing(),
+    ongoingCcBookingsWithIncompletePaymentProcessing(),
+    ongoingCcPickupsWithIncompletePaymentProcessing(),
   ])
     .then(responses => {
       if (hasOngoingTransactionsWithIncompletePaymentProcessing(responses)) {

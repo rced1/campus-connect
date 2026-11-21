@@ -109,6 +109,13 @@ Adds require a one-line reason here. Prefer template-shipped packages over new l
 | `ioredis` | Redis client for cache, rate limit, SSE pub/sub, worker cursor (brief §8/§11). |
 | `esbuild` (dev) | Bundle `sharetribe-flex-sdk` into `campus/vendor/sharetribe-sdk.js` without a second Webpack config. |
 
+### M2 process notes (2026-11-21)
+
+- `cc-booking` and `cc-pickup` created on Test (`trialmarketplace7-test`) as version 1 with aliases `release-1`.
+- Search schemas pushed: `listingType`, `categoryLevel1`, `instantBook`, `accent` (public). `listingType` may already exist from Console (409 on first set is OK).
+- Full end-to-end booking + pickup via SDK (with Stripe) is deferred to **M6** when checkout exists; M2 verifies processes via CLI + unit/allow-list tests.
+- `cc-pickup` uses state name `cancelled` (brief spelling); provider cancel is two transitions (`provider-cancel-from-accepted` / `from-ready`) because EDN needs one source state per transition.
+
 Expected later:
 
 - **Playwright / k6**: e2e and load tests (M8).

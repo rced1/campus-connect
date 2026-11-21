@@ -4,6 +4,9 @@ import * as bookingProcess from './transactionProcessBooking';
 import * as inquiryProcess from './transactionProcessInquiry';
 import * as negotiationProcess from './transactionProcessNegotiation';
 import * as downloadProcess from './transactionProcessDownload';
+// CC: Campus Connect processes
+import * as ccBookingProcess from './transactionProcessCcBooking';
+import * as ccPickupProcess from './transactionProcessCcPickup';
 
 // Supported unit types
 // Note: These are passed to translations/microcopy in certain cases.
@@ -26,6 +29,9 @@ export const BOOKING_PROCESS_NAME = 'default-booking';
 export const INQUIRY_PROCESS_NAME = 'default-inquiry';
 export const NEGOTIATION_PROCESS_NAME = 'default-negotiation';
 export const DOWNLOAD_PROCESS_NAME = 'default-download';
+// CC:
+export const CC_BOOKING_PROCESS_NAME = 'cc-booking';
+export const CC_PICKUP_PROCESS_NAME = 'cc-pickup';
 
 /**
  * A process should export:
@@ -73,6 +79,19 @@ const PROCESSES = [
     alias: `${DOWNLOAD_PROCESS_NAME}/release-1`,
     process: downloadProcess,
     unitTypes: [FILE],
+  },
+  // CC: Campus Connect
+  {
+    name: CC_BOOKING_PROCESS_NAME,
+    alias: `${CC_BOOKING_PROCESS_NAME}/release-1`,
+    process: ccBookingProcess,
+    unitTypes: [DAY, NIGHT, HOUR, FIXED],
+  },
+  {
+    name: CC_PICKUP_PROCESS_NAME,
+    alias: `${CC_PICKUP_PROCESS_NAME}/release-1`,
+    process: ccPickupProcess,
+    unitTypes: [ITEM],
   },
 ];
 
