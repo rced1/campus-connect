@@ -57,9 +57,9 @@ function closeModal() {
   document.querySelector("#modal-root").innerHTML = "";
 }
 
-/** Copies a link to a buyer page, such as "listing/maya-portraits". The buyer page opens it on load. */
+/** Copies a shareable deep link, e.g. path "l/uuid" or "s/uuid". */
 async function shareLink(path) {
-  const link = new URL(`index.html#/${path}`, location.href).href;
+  const link = new URL(`/${path.replace(/^\//, "")}`, location.origin).href;
   try {
     await navigator.clipboard.writeText(link);
     showToast("Link copied.");

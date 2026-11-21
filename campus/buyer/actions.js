@@ -80,14 +80,16 @@ Object.assign(ACTIONS, {
   },
   "increase-quantity": update(() => ({ quantity: Math.max(1, Math.min(getListing(state.selectedListingId).quantityAvailable, state.quantity + 1)) })),
   "decrease-quantity": update(() => ({ quantity: Math.max(1, state.quantity - 1) })),
-  "start-checkout": (target) => setView("checkout", { selectedListingId: target.dataset.id }),
+  "start-checkout": (target) =>
+    requireAuth(() => setView("checkout", { selectedListingId: target.dataset.id })),
   "back-from-checkout": () => setView("listing"),
-  "confirm-order": async (target) => {
-    const { date, time } = state.booking || {};
-    const order = await api.placeOrder({ listingId: target.dataset.id, date, time, quantity: state.quantity });
-    await load("orders", "listings");
-    setView("order", { selectedOrderId: order.id });
-  },
+  "confirm-order": (target) =>
+    requireAuth(async () => {
+      const { date, time } = state.booking || {};
+      const order = await api.placeOrder({ listingId: target.dataset.id, date, time, quantity: state.quantity });
+      await load("orders", "listings");
+      setView("order", { selectedOrderId: order.id });
+    }),
   "open-order": (target) => setView("order", { selectedOrderId: target.dataset.id }),
 
   /* Sellers and stores */
@@ -106,10 +108,15 @@ Object.assign(ACTIONS, {
 
   /* Messages */
 
-  "message-seller": (target) => openConversation({ sellerId: target.dataset.seller, listingId: target.dataset.listing }),
-  "message-store": (target) => openConversation({ sellerId: getStore(target.dataset.id).sellerId }),
-  "message-agent": (target) => openConversation({ agentId: target.dataset.id }),
-  "message-board-item": (target) => openConversation(target.dataset.kind === "job" ? { jobId: target.dataset.id } : { housingId: target.dataset.id }),
+  "message-seller": (target) =>
+    requireAuth(() => openConversation({ sellerId: target.dataset.seller, listingId: target.dataset.listing })),
+  "message-store": (target) =>
+    requireAuth(() => openConversation({ sellerId: getStore(target.dataset.id).sellerId })),
+  "message-agent": (target) => requireAuth(() => openConversation({ agentId: target.dataset.id })),
+  "message-board-item": (target) =>
+    requireAuth(() =>
+      openConversation(target.dataset.kind === "job" ? { jobId: target.dataset.id } : { housingId: target.dataset.id })
+    ),
   "select-conversation": update((target) => ({ selectedConversationId: target.dataset.id })),
 
   /* Job Board and Housing */

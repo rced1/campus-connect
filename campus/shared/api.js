@@ -231,11 +231,87 @@ const api = (() => {
 
   /* ---------- Endpoints ---------- */
 
-  const endpoints = {
-    /* Session */
+  const mapSession = (user) => {
+    if (!user) return { userId: '', state: 'anonymous', emailVerified: false, verified: false, hasStore: false, stripeReady: false, email: '' };
+    const attrs = user.attributes || {};
+    const profile = attrs.profile || {};
+    const publicData = profile.publicData || {};
+    const metadata = profile.metadata || {};
+    return {
+      userId: user.id?.uuid || user.id || '',
+      state: attrs.state || 'active',
+      emailVerified: Boolean(attrs.emailVerified),
+      verified: Boolean(metadata.verified) || Boolean(attrs.emailVerified && String(attrs.email || '').toLowerCase().endsWith('@sdsu.edu')),
+      hasStore: Boolean(publicData.store),
+      stripeReady: Boolean(user.stripeAccount || user.relationships?.stripeAccount?.data),
+      email: attrs.email || '',
+      displayName: profile.displayName || [profile.firstName, profile.lastName].filter(Boolean).join(' ')
+    };
+  };
 
-    getSession: () => ({ userId: me().id }),
-    signOut: () => sessionStorage.removeItem(HANDOFF_KEY),
+  const endpoints = {
+    /* Session — Sharetribe when SDK is ready; empty session when signed out */
+
+    getSession: async () => {
+      await ccSdk.ready;
+      if (!ccSdk.get()) {
+        // Offline / SDK missing: keep mock identity so local prototype still opens.
+        return { userId: me().id, state: 'active', emailVerified: true, verified: true, hasStore: asSeller, stripeReady: false, email: '', mock: true };
+      }
+      try {
+        const res = await ccSdk.call((sdk) =>
+          sdk.currentUser.show({ include: ['profileImage', 'stripeAccount', 'stripeCustomer.defaultPaymentMethod'] })
+        );
+        return mapSession(res.data.data);
+      } catch (err) {
+        if (err.code === 'unauthorized') return { userId: '', state: 'anonymous', emailVerified: false, verified: false, hasStore: false, stripeReady: false, email: '' };
+        // Anonymous token / not logged in
+        return { userId: '', state: 'anonymous', emailVerified: false, verified: false, hasStore: false, stripeReady: false, email: '' };
+      }
+    },
+
+    signIn: async ({ email, password }) => {
+      await ccSdk.call((sdk) => sdk.login({ username: email, password }));
+      return endpoints.getSession();
+    },
+
+    signUp: async ({ firstName, lastName, email, password }) => {
+      requireAll({ firstName, lastName, email, password }, ['firstName', 'lastName', 'email', 'password'], 'Fill in your name, email, and password.');
+      await ccSdk.call((sdk) =>
+        sdk.currentUser.create({
+          email,
+          password,
+          firstName,
+          lastName,
+          publicData: { campusLine: 'SDSU · Student' }
+        })
+      );
+      try {
+        await ccSdk.call((sdk) => sdk.login({ username: email, password }));
+        await ccSdk.call((sdk) => sdk.currentUser.sendVerificationEmail());
+      } catch (_) {
+        /* login may wait for verification depending on Console settings */
+      }
+      return { email };
+    },
+
+    signOut: async () => {
+      sessionStorage.removeItem(HANDOFF_KEY);
+      try {
+        await ccSdk.call((sdk) => sdk.logout());
+      } catch (_) {
+        /* ignore */
+      }
+    },
+
+    requestPasswordReset: async (email) => {
+      if (!String(email || '').trim()) fail('Enter your email.');
+      await ccSdk.call((sdk) => sdk.passwordReset.request({ email }));
+    },
+
+    resendVerification: async () => {
+      await ccSdk.call((sdk) => sdk.currentUser.sendVerificationEmail());
+    },
 
     /* Catalog */
 
